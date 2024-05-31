@@ -50,7 +50,14 @@ class VisionBasedTraining:
         def compute(self, inputs, role):
             # view (samples, width * height * channels) -> (samples, width, height, channels)
             # permute (samples, width, height, channels) -> (samples, channels, width, height)
-            x = inputs["states"]["rgb"]
+            if "states" in inputs:
+                x = inputs["states"]
+                if isinstance(x, dict):
+                    x = x["rgb"]
+            else:
+                x = inputs["rgb"]
+            # Make a copy to avoid mutating the original tensor.
+            x = x.clone()
             observation_shape = self.observation_space["rgb"].shape
             x = x.view(-1, *observation_shape[1:])
             x = x.permute(0, 3, 1, 2).float()
@@ -61,6 +68,11 @@ class VisionBasedTraining:
 
             x = self.cnn(x) # torch.Size([1, 64, 28, 28]) 28-256, 60-512, 12-128
             x = self.linear(x)
+
+            if x.shape[0] != observation_shape[0]:
+                q, r = divmod(x.shape[0], observation_shape[0])
+                assert r == 0
+                x = x.view(q, observation_shape[0], x.shape[-1])
             return 10 * torch.tanh(x), self.log_std_parameter, {}   # JetBotEnv action_space is -10 to 10
 
     class Value(DeterministicMixin, Model):
@@ -93,12 +105,24 @@ class VisionBasedTraining:
         def compute(self, inputs, role):
             # view (samples, width * height * channels) -> (samples, width, height, channels)
             # permute (samples, width, height, channels) -> (samples, channels, width, height)
-            x = inputs["states"]["rgb"]
+            if "states" in inputs:
+                x = inputs["states"]
+                if isinstance(x, dict):
+                    x = x["rgb"]
+            else:
+                x = inputs["rgb"]
+            # Make a copy to avoid mutating the original tensor.
+            x = x.clone()
             observation_shape = self.observation_space["rgb"].shape
             x = x.view(-1, *observation_shape[1:])
             x = x.permute(0, 3, 1, 2).float()
             x = self.cnn(x)
             x = self.linear(x)
+
+            if x.shape[0] != observation_shape[0]:
+                q, r = divmod(x.shape[0], observation_shape[0])
+                assert r == 0
+                x = x.view(q, observation_shape[0], x.shape[-1])
             return x, {}
 
 class StateBasedTraining:
