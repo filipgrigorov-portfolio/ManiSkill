@@ -23,9 +23,10 @@ class SceneBuilder:
     scene_configs: List[Any] = None
     """List of scene configuration information that can be used to construct scenes. Can be simply a path to a json file or a dictionary"""
 
-    def __init__(self, env, robot_init_qpos_noise=0.02):
+    def __init__(self, env, robot_init_qpos_noise=0.02, **kwargs):
         self.env = env
         self.robot_init_qpos_noise = robot_init_qpos_noise
+        self.config = {**kwargs}
 
     def build(self, **kwargs):
         """

@@ -14,6 +14,42 @@ from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.scene_builder import SceneBuilder
 
 
+def _customize_table(
+    table_model_file: Path, color: List[float], remove_texture=True
+) -> Path:
+    """
+    Create a new .glb file for table with new color.
+    Return the path to the customized table.
+    """
+    customized_table_model_file = (
+        table_model_file.parent
+        / f"{table_model_file.stem}_customized{table_model_file.suffix}"
+    )
+    print(f"Using: customized_table_model_file")
+    from pygltflib import GLTF2, Material
+
+    # Load the GLB file
+    gltf = GLTF2().load(table_model_file)
+
+    # Assuming want to change the color of the first material (true for table)
+    material = gltf.materials[0]
+
+    # Check if the material has a PBR metallic roughness property
+    if not material.pbrMetallicRoughness:
+        raise ValueError("Need pbrMetallicRoughness property")
+
+    if remove_texture:
+        # Remove preexisting wooden-texture
+        material.pbrMetallicRoughness.baseColorTexture = None
+
+    # Set the base color to the desired RGBA values (e.g., red color)
+    material.pbrMetallicRoughness.baseColorFactor = color
+
+    # Save the customized GLB file
+    gltf.save(customized_table_model_file)
+    return customized_table_model_file
+
+
 # TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
@@ -22,6 +58,11 @@ class TableSceneBuilder(SceneBuilder):
         builder = self.scene.create_actor_builder()
         model_dir = Path(osp.dirname(__file__)) / "assets"
         table_model_file = str(model_dir / "table.glb")
+        if "table_color" in self.config:
+            table_model_file = str(
+                _customize_table(Path(table_model_file), self.config["table_color"])
+            )
+        print(f"INFO: Using {table_model_file} for the table model")
         scale = 1.75
 
         table_pose = sapien.Pose(q=euler2quat(0, 0, np.pi / 2))
