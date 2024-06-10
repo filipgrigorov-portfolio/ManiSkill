@@ -42,7 +42,7 @@ def _customize_table(
 
     if remove_texture:
         # Remove preexisting wooden-texture
-        material.pbrMetallicRoughness = None
+        material.pbrMetallicRoughness.baseColorTexture = None
 
     # Set the base color to the desired RGBA values
     material.pbrMetallicRoughness.baseColorFactor = color
