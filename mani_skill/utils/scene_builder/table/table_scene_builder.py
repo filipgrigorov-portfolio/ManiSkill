@@ -15,21 +15,23 @@ from mani_skill.utils.scene_builder import SceneBuilder
 
 
 def _customize_table(
-    table_model_file: Path, color: List[float], remove_texture=True
+    table_model_path: Path, color: List[float], remove_texture=True
 ) -> Path:
     """
     Create a new .glb file for table with new color.
     Return the path to the customized table.
+    Args:
+        color: RGBA, should be in range [0, 1]
     """
-    customized_table_model_file = (
-        table_model_file.parent
-        / f"{table_model_file.stem}_customized{table_model_file.suffix}"
+    customized_table_model_path = (
+        table_model_path.parent
+        / f"{table_model_path.stem}_customized{table_model_path.suffix}"
     )
-    print(f"Using: customized_table_model_file")
+    print(f"Using: customized_table_model_path")
     from pygltflib import GLTF2, Material
 
     # Load the GLB file
-    gltf = GLTF2().load(table_model_file)
+    gltf = GLTF2().load(table_model_path)
 
     # Assuming want to change the color of the first material (true for table)
     material = gltf.materials[0]
@@ -40,14 +42,66 @@ def _customize_table(
 
     if remove_texture:
         # Remove preexisting wooden-texture
-        material.pbrMetallicRoughness.baseColorTexture = None
+        material.pbrMetallicRoughness = None
 
-    # Set the base color to the desired RGBA values (e.g., red color)
+    # Set the base color to the desired RGBA values
     material.pbrMetallicRoughness.baseColorFactor = color
 
     # Save the customized GLB file
-    gltf.save(customized_table_model_file)
-    return customized_table_model_file
+    gltf.save(customized_table_model_path)
+    return customized_table_model_path
+
+
+def _preview_table(table_model_path: Path, view_image=False) -> Path:
+    import bpy
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=str(table_model_path))
+    imported_objects = bpy.context.selected_objects
+
+    bpy.ops.object.camera_add(location=(0.74277564, -2.32305479, -1.68291426))
+    camera = bpy.context.object
+    camera.rotation_euler = (
+        0.18427537381649017,
+        -2.2037839889526367,
+        1.7085068225860596,
+    )
+    bpy.context.scene.camera = camera  # Set the camera as the active camera
+
+    # This light source shines on the table top, increase or decrease intensity as desired.
+    bpy.ops.object.light_add(type="SUN", location=(5, -5, 5))
+    light = bpy.context.object
+    light.data.energy = 150
+
+    # Additional light from below to improve look
+    bpy.ops.object.light_add(type="POINT", location=(0, 0, 5))
+    point_light = bpy.context.object
+    point_light.data.energy = 1000
+
+    # Ensure there is a world in the scene
+    if bpy.context.scene.world is None:
+        bpy.context.scene.world = bpy.data.worlds.new("NewWorld")
+    world = bpy.context.scene.world
+    world.use_nodes = True
+    bg_node = world.node_tree.nodes["Background"]
+    bg_node.inputs["Color"].default_value = (0.1, 0.1, 0.1, 1)  # Set background color to grey
+
+    # Set the render settings
+    bpy.context.scene.render.image_settings.file_format = "PNG"
+    bpy.context.scene.render.filepath = str(
+        table_model_path.parent / f"{table_model_path.stem}_preview.png"
+    )
+    # Render the image
+    bpy.ops.render.render(write_still=True)
+
+    print(f"Preview saved to: {bpy.context.scene.render.filepath}")
+
+    if view_image:
+        import matplotlib.pyplot as plt
+        import matplotlib.image as mpimg
+        img = mpimg.imread(bpy.context.scene.render.filepath)
+        imgplot = plt.imshow(img)
+        plt.show()
 
 
 # TODO (stao): make the build and initialize api consistent with other scenes
@@ -58,10 +112,11 @@ class TableSceneBuilder(SceneBuilder):
         builder = self.scene.create_actor_builder()
         model_dir = Path(osp.dirname(__file__)) / "assets"
         table_model_file = str(model_dir / "table.glb")
+        self.config["table_color"] = (1, 0, 0, 1) # RGBA, Example for Red
         if "table_color" in self.config:
-            table_model_file = str(
-                _customize_table(Path(table_model_file), self.config["table_color"])
-            )
+            table_model_file = _customize_table(Path(table_model_file), self.config["table_color"])
+            _preview_table(table_model_file, view_image=True)
+            table_model_file = str(table_model_file)
         print(f"INFO: Using {table_model_file} for the table model")
         scale = 1.75
 
