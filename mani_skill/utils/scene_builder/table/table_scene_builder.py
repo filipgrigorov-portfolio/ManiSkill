@@ -1,6 +1,7 @@
 import os.path as osp
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+import json
 
 import numpy as np
 import sapien
@@ -15,7 +16,7 @@ from mani_skill.utils.scene_builder import SceneBuilder
 
 
 def _customize_table(
-    table_model_path: Path, color: List[float], remove_texture=True
+    table_model_path: Path, color: Optional[List[float]] = None, remove_texture=False
 ) -> Path:
     """
     Create a new .glb file for table with new color.
@@ -108,13 +109,24 @@ def _preview_table(table_model_path: Path, view_image=False) -> Path:
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        with open(
+            Path(__file__).parent.parent.parent.parent.parent / "table_config.json"
+        ) as f: # Project root directory / table_config.json
+            self.config = json.load(f)
+
     def build(self):
         builder = self.scene.create_actor_builder()
         model_dir = Path(osp.dirname(__file__)) / "assets"
         table_model_file = str(model_dir / "table.glb")
-        self.config["table_color"] = (1, 0, 0, 1) # RGBA, Example for Red
-        if "table_color" in self.config:
-            table_model_file = _customize_table(Path(table_model_file), self.config["table_color"])
+        if len(self.config) > 0:
+            table_model_file = _customize_table(
+                Path(table_model_file),
+                color=self.config["color"],
+                remove_texture=self.config["remove_texture"],
+            )
             _preview_table(table_model_file, view_image=True)
             table_model_file = str(table_model_file)
         print(f"INFO: Using {table_model_file} for the table model")
