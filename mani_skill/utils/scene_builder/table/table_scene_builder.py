@@ -43,7 +43,9 @@ def _customize_table(
 
     if remove_texture:
         # Remove preexisting wooden-texture
+        material.normalTexture = None
         material.pbrMetallicRoughness.baseColorTexture = None
+        material.pbrMetallicRoughness.metallicRoughnessTexture = None
 
     # Set the base color to the desired RGBA values
     material.pbrMetallicRoughness.baseColorFactor = color
@@ -85,7 +87,12 @@ def _preview_table(table_model_path: Path, view_image=False) -> Path:
     world = bpy.context.scene.world
     world.use_nodes = True
     bg_node = world.node_tree.nodes["Background"]
-    bg_node.inputs["Color"].default_value = (0.1, 0.1, 0.1, 1)  # Set background color to grey
+    bg_node.inputs["Color"].default_value = (
+        0.1,
+        0.1,
+        0.1,
+        1,
+    )  # Set background color to grey
 
     # Set the render settings
     bpy.context.scene.render.image_settings.file_format = "PNG"
@@ -100,6 +107,7 @@ def _preview_table(table_model_path: Path, view_image=False) -> Path:
     if view_image:
         import matplotlib.pyplot as plt
         import matplotlib.image as mpimg
+
         img = mpimg.imread(bpy.context.scene.render.filepath)
         imgplot = plt.imshow(img)
         plt.show()
