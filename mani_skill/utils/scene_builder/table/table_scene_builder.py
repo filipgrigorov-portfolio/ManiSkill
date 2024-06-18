@@ -47,8 +47,9 @@ def _customize_table(
         material.pbrMetallicRoughness.baseColorTexture = None
         material.pbrMetallicRoughness.metallicRoughnessTexture = None
 
-    # Set the base color to the desired RGBA values
-    material.pbrMetallicRoughness.baseColorFactor = color
+    if color:
+        # Set the base color to the desired RGBA values
+        material.pbrMetallicRoughness.baseColorFactor = color
 
     # Save the customized GLB file
     gltf.save(customized_table_model_path)
@@ -130,13 +131,20 @@ class TableSceneBuilder(SceneBuilder):
         model_dir = Path(osp.dirname(__file__)) / "assets"
         table_model_file = str(model_dir / "table.glb")
         if len(self.config) > 0:
-            table_model_file = _customize_table(
-                Path(table_model_file),
-                color=self.config["color"],
-                remove_texture=self.config["remove_texture"],
-            )
-            _preview_table(table_model_file, view_image=True)
-            table_model_file = str(table_model_file)
+            table_model_path = Path(table_model_file)
+            if set(self.config.keys()) | {"color", "remove_texture"}:
+                table_model_path = _customize_table(
+                    table_model_path,
+                    color=None if "color" not in self.config else self.config["color"],
+                    remove_texture=(
+                        False
+                        if "remove_texture" not in self.config
+                        else self.config["remove_texture"]
+                    ),
+                )
+            if "preview" in self.config and self.config["preview"]:
+                _preview_table(table_model_path, view_image=True)
+            table_model_file = str(table_model_path)
         print(f"INFO: Using {table_model_file} for the table model")
         scale = 1.75
 
