@@ -28,7 +28,7 @@ def run_rendering(args, envs):
         frames = []
 
         print(f"Epoch: {iteration}, global_step={global_step}")
-        rollout_time = time.time()
+        rollout_time = time.perf_counter()
 
         for step in range(0, args.num_steps):
             with torch.no_grad():
@@ -36,11 +36,11 @@ def run_rendering(args, envs):
                 action = probs.sample(sample_shape=[args.num_envs, 8])
                 #print(f"Sampled action: {action}")
 
-            step_time_pnt = time.time()
+            step_time_pnt = time.perf_counter()
 
             next_obs, reward, terminations, truncations, infos = envs.step(action)
 
-            elapsed_time_ms = (time.time() - step_time_pnt) * 1e-3
+            elapsed_time_ms = (time.perf_counter() - step_time_pnt) * 1000
 
             time_pnts.append(elapsed_time_ms)
 
@@ -55,10 +55,10 @@ def run_rendering(args, envs):
                     img_log = img_log[..., :3]
                 frames.append(img_log)
 
-        rollout_time = time.time() - rollout_time
+        rollout_time = time.perf_counter() - rollout_time
         if ENABLE_WANDB:
             wandb.log({
-                "ENABLE_WANDB/rollout_time (s)": (time.time() - step_time_pnt),
+                "ENABLE_WANDB/rollout_time (s)": (time.perf_counter() - step_time_pnt),
             })
         print(f"Rollout complete in {rollout_time} secs!")
 
@@ -146,7 +146,6 @@ if __name__ == "__main__":
 
 
     global_step = 0
-    start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
 
     print(f"####")

@@ -1,6 +1,7 @@
 import os.path as osp
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+import json
 
 import numpy as np
 import sapien
@@ -14,14 +15,137 @@ from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.scene_builder import SceneBuilder
 
 
+def _customize_table(
+    table_model_path: Path, color: Optional[List[float]] = None, remove_texture=False
+) -> Path:
+    """
+    Create a new .glb file for table with new color.
+    Return the path to the customized table.
+    Args:
+        color: RGBA, should be in range [0, 1]
+    """
+    customized_table_model_path = (
+        table_model_path.parent
+        / f"{table_model_path.stem}_customized{table_model_path.suffix}"
+    )
+    print(f"Using: customized_table_model_path")
+    from pygltflib import GLTF2, Material
+
+    # Load the GLB file
+    gltf = GLTF2().load(table_model_path)
+
+    # Assuming want to change the color of the first material (true for table)
+    material = gltf.materials[0]
+
+    # Check if the material has a PBR metallic roughness property
+    if not material.pbrMetallicRoughness:
+        raise ValueError("Need pbrMetallicRoughness property")
+
+    if remove_texture:
+        # Remove preexisting wooden-texture
+        material.normalTexture = None
+        material.pbrMetallicRoughness.baseColorTexture = None
+        material.pbrMetallicRoughness.metallicRoughnessTexture = None
+
+    if color:
+        # Set the base color to the desired RGBA values
+        material.pbrMetallicRoughness.baseColorFactor = color
+
+    # Save the customized GLB file
+    gltf.save(customized_table_model_path)
+    return customized_table_model_path
+
+
+def _preview_table(table_model_path: Path, view_image=False) -> Path:
+    import bpy
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=str(table_model_path))
+    imported_objects = bpy.context.selected_objects
+
+    bpy.ops.object.camera_add(location=(0.74277564, -2.32305479, -1.68291426))
+    camera = bpy.context.object
+    camera.rotation_euler = (
+        0.18427537381649017,
+        -2.2037839889526367,
+        1.7085068225860596,
+    )
+    bpy.context.scene.camera = camera  # Set the camera as the active camera
+
+    # This light source shines on the table top, increase or decrease intensity as desired.
+    bpy.ops.object.light_add(type="SUN", location=(5, -5, 5))
+    light = bpy.context.object
+    light.data.energy = 150
+
+    # Additional light from below to improve look
+    bpy.ops.object.light_add(type="POINT", location=(0, 0, 5))
+    point_light = bpy.context.object
+    point_light.data.energy = 1000
+
+    # Ensure there is a world in the scene
+    if bpy.context.scene.world is None:
+        bpy.context.scene.world = bpy.data.worlds.new("NewWorld")
+    world = bpy.context.scene.world
+    world.use_nodes = True
+    bg_node = world.node_tree.nodes["Background"]
+    bg_node.inputs["Color"].default_value = (
+        0.1,
+        0.1,
+        0.1,
+        1,
+    )  # Set background color to grey
+
+    # Set the render settings
+    bpy.context.scene.render.image_settings.file_format = "PNG"
+    bpy.context.scene.render.filepath = str(
+        table_model_path.parent / f"{table_model_path.stem}_preview.png"
+    )
+    # Render the image
+    bpy.ops.render.render(write_still=True)
+
+    print(f"Preview saved to: {bpy.context.scene.render.filepath}")
+
+    if view_image:
+        import matplotlib.pyplot as plt
+        import matplotlib.image as mpimg
+
+        img = mpimg.imread(bpy.context.scene.render.filepath)
+        imgplot = plt.imshow(img)
+        plt.show()
+
+
 # TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
     robot_init_qpos_noise: float = 0.02
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        with open(
+            Path(__file__).parent.parent.parent.parent.parent / "table_config.json"
+        ) as f: # Project root directory / table_config.json
+            self.config = json.load(f)
 
     def build(self):
         builder = self.scene.create_actor_builder()
         model_dir = Path(osp.dirname(__file__)) / "assets"
         table_model_file = str(model_dir / "table.glb")
+        if len(self.config) > 0:
+            table_model_path = Path(table_model_file)
+            if set(self.config.keys()) | {"color", "remove_texture"}:
+                table_model_path = _customize_table(
+                    table_model_path,
+                    color=None if "color" not in self.config else self.config["color"],
+                    remove_texture=(
+                        False
+                        if "remove_texture" not in self.config
+                        else self.config["remove_texture"]
+                    ),
+                )
+            if "preview" in self.config and self.config["preview"]:
+                _preview_table(table_model_path, view_image=True)
+            table_model_file = str(table_model_path)
+        print(f"INFO: Using {table_model_file} for the table model")
         scale = 1.75
 
         table_pose = sapien.Pose(q=euler2quat(0, 0, np.pi / 2))
