@@ -297,7 +297,7 @@ if __name__ == "__main__":
             if args.evaluate:
                 break
 
-    envs.close()
+    eval_envs.close()
 
     if writer is not None: writer.close()
 
