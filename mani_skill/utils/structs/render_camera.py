@@ -67,25 +67,36 @@ class RenderCamera:
     def __hash__(self):
         return self._render_cameras[0].__hash__()
 
+    def handle_cached_extrinsic_matrix(self):
+        return self._cached_extrinsic_matrix
+
+    def get_ros2opencv(self):
+        return torch.tensor(
+            [[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]],
+            device=self.scene.device,
+            dtype=torch.float32,
+        ).T
+
+    def compute_res(self, ros2opencv):
+        return (
+            ros2opencv @ self.get_global_pose().inv().to_transformation_matrix()
+        )[:, :3, :4]
     # -------------------------------------------------------------------------- #
     # Functions from RenderCameraComponent
     # -------------------------------------------------------------------------- #
     def get_extrinsic_matrix(self):
         if physx.is_gpu_enabled():
             if self._cached_extrinsic_matrix is not None:
-                return self._cached_extrinsic_matrix
-            ros2opencv = torch.tensor(
-                [[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]],
-                device=self.scene.device,
-                dtype=torch.float32,
-            ).T
-            res = (
-                ros2opencv @ self.get_global_pose().inv().to_transformation_matrix()
-            )[:, :3, :4]
+                return self.handle_cached_extrinsic_matrix()
+            ros2opencv = self.get_ros2opencv()
+            print(ros2opencv.shape)
+            res = self.compute_res(ros2opencv)
             if self.mount is None:
                 self._cached_extrinsic_matrix = res
             return res
         else:
+            print("GPU IS NOT ENABLED")
+            exit()
             return common.to_tensor(self._render_cameras[0].get_extrinsic_matrix())[
                 None, :
             ]

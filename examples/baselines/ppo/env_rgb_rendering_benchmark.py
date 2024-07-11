@@ -1,3 +1,5 @@
+import cProfile
+
 import os
 import random
 import time
@@ -24,6 +26,8 @@ ENABLE_WANDB = False
 SAVE_IMGS = False
 
 def run_rendering(args, envs):
+    time_pnts = []
+    global_step = 0
     for iteration in range(1, args.num_iterations + 1):
         frames = []
 
@@ -72,7 +76,7 @@ def run_rendering(args, envs):
     return time_pnts
 
 
-if __name__ == "__main__":
+def main():
     args = tyro.cli(Args)
 
     args.env_id = "AssemblingKits-v1" # 
@@ -145,7 +149,6 @@ if __name__ == "__main__":
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
 
-    global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
 
@@ -163,8 +166,6 @@ if __name__ == "__main__":
             sync_tensorboard=False,
         )
 
-    time_pnts = []
-
     print(sapien.render.get_device_summary())
     print(sapien.render.get_camera_shader_dir())
 
@@ -178,3 +179,10 @@ if __name__ == "__main__":
     print(f"Elapsed time (ms): \nmean: {mean}\nstd: {std}\nmin: {min}\nmax: {max}\n\n\n")
 
     envs.close()
+
+if __name__ == "__main__":
+    profiler = cProfile.Profile()
+    profiler.enable()
+    main()
+    profiler.disable()
+    profiler.dump_stats("profile_output_temp.prof")
