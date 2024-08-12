@@ -82,14 +82,18 @@ def run_default_visual_ppo(task, name, render_quality):
         "examples/baselines/ppo/ppo_rgb_custom.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
-        f"--num_envs={40}", #256 default: 20, 60, 100, 200, 256 (the max I can do with rtx 4090), 400 (not working)
-        f"--update_epochs={8}", 
-        f"--num_minibatches={16}",
+        f"--num_envs={100}", #256 default: 20, 60, 100, 200, 256 (the max I can do with rtx 4090), 400 (not working)
+        f"--update_epochs={8}", #8 
+        f"--num_minibatches={16}", #16
         f"--total_timesteps={10_000_000}",
         f"--eval_freq={10}",
-        f"--num-steps={20}", # 20 by default
+        f"--num-steps={80}", # 20 by default
         f"--sim_quality={render_quality}",
-        #f"--track"
+        f"--ent_coef={0.0}", # 0.0
+        f"--clip_coef={0.2}", # 0.2
+        f"--vf_coef={0.5}", # 0.5
+        f"--learning_rate={3e-4}", # 3e-4
+        f"--track"
     ])
 
     end_time = time.time()
@@ -97,6 +101,10 @@ def run_default_visual_ppo(task, name, render_quality):
     print(f"Elasped (seconds): {elapsed_sec}")
 
     print("End")
+
+
+def param_optimizer():
+    raise NotImplementedError
 
 
 if __name__ == "__main__":
@@ -109,8 +117,8 @@ if __name__ == "__main__":
     if args.visual:
         tasks = [
             #"PushCube-v1", 
-            #"PickCube-v1", 
-            "StackCube-v1", 
+            "PickCube-v1", 
+            #"StackCube-v1", 
             #"PegInsertionSide-v1", 
             #"AssemblingKits-v1", # realsense
             #"PlugCharger-v1"
@@ -121,8 +129,8 @@ if __name__ == "__main__":
         EXPERIMENT = f"training/measures-success-rate" # modality or sim-quality etc.
         names = [
             #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}", 
-            #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
-            f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
+            f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
+            #f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-plugcharger-{RENDER_QUALITY}", 
@@ -144,19 +152,19 @@ if __name__ == "__main__":
     elif args.state:
         tasks = [
             #"PushCube-v1", 
-            #"PickCube-v1", 
+            "PickCube-v1", 
             #"StackCube-v1", 
             #"PegInsertionSide-v1", 
             #"AssemblingKits-v1", # realsense
             #"PlugCharger-v1"
         ]
 
-        RENDER_QUALITY = "rasterization"
+        RENDER_QUALITY = "high"
         MODALITY = "state"
-        EXPERIMENT = "iterations/timesteps-1M" # modality or sim-quality etc.
+        EXPERIMENT = "training/measures-success-rate" # modality or sim-quality etc.
         names = [
             #f"{EXPERIMENT}-{MODALITY}-pushcube-{RENDER_QUALITY}",
-            #f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
+            f"{EXPERIMENT}-{MODALITY}-pickcube-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-stackcube-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-peginsertionside-{RENDER_QUALITY}",
             #f"{EXPERIMENT}-{MODALITY}-assemblingkits-{RENDER_QUALITY}",
