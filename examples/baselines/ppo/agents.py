@@ -175,9 +175,9 @@ class Agent(nn.Module):
         self.is_tracked = is_tracked
 
         #self.feature_net = NatureCNN(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained)
-        print("\t\tUsing NatureCNNGRURGBD\n\n\n")
-        #self.feature_net = NatureCNNGRU(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained)
-        self.feature_net = NatureCNNGRURGBD(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained)
+        print("\t\tUsing NatureCNNGRU\n\n\n")
+        self.feature_net = NatureCNNGRU(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained)
+        #self.feature_net = NatureCNNGRURGBD(sample_obs=sample_obs, with_state=with_state, pretrained=pretrained)
         if feature_net:
             feature_net = feature_net
         

@@ -71,6 +71,20 @@ class PickCubeEnvWithRandomCamPose(pick_cube.PickCubeEnv):
             ),
         )
         return [CameraConfig("base_camera", pose=pose, width=128, height=128, fov=np.pi / 2, near=0.01, far=100)]
+
+
+@register_env("PickCube-CustomCameraPose", max_episode_steps=50)
+class PickCubeEnvWithRandomCamPose(pick_cube.PickCubeEnv):
+    @property
+    def _default_sensor_configs(self):
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = Pose.create(pose)
+        return [CameraConfig(
+            "base_camera", 
+            pose=pose, 
+            width=128, height=128, 
+            fov=np.pi / 2, near=0.01, far=100)]
+
     
 @register_env("StackCube-RandomCameraPose", max_episode_steps=50)
 class StackCubeEnvWithRandomCamPose(stack_cube.StackCubeEnv):

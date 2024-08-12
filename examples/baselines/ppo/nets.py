@@ -198,8 +198,12 @@ class NatureCNNGRU(nn.Module):
     def __init__(self, sample_obs, hidden_dim=256, with_state=False, pretrained=None):
         super().__init__()
 
+        print(f"ptretrained is not an option but a placeholder")
+
         # NOTE: Run rgb or rgb + state
         self.with_state = with_state
+        self.run_state_every_count = 0 # debug
+        self.RUN_STATE_EVERY = 30
 
         self.out_features = 0
         feature_size = 256
@@ -236,6 +240,10 @@ class NatureCNNGRU(nn.Module):
                 nn.GRU(n_size, hidden_dim, batch_first=True),
             )
 
+            self.filling = nn.Sequential(
+                nn.Linear(hidden_dim, feature_size)
+            )
+
         # to easily figure out the dimensions after flattening, we pass a test tensor
         with torch.no_grad():
             n_flatten = self.cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu())
@@ -266,9 +274,16 @@ class NatureCNNGRU(nn.Module):
         out = self.fc(out)
         encoded_tensor_list.append(out)
 
+        state_obs = observations["state"]
+        self.run_state_every_count += 1
         if self.with_state:
-            out = self.fc_state(out)
-            encoded_tensor_list.append(out)
+            if self.run_state_every_count % self.RUN_STATE_EVERY == self.RUN_STATE_EVERY - 1:
+                print(f"Run state observation @ every {self.run_state_every_count} (Simulate measurement)")
+                out = self.fc_state(state_obs)
+                encoded_tensor_list.append(out)
+            else:
+                out = self.filling(out)
+                encoded_tensor_list.append(out)
 
         return torch.cat(encoded_tensor_list, dim=1)
 
@@ -278,6 +293,8 @@ class NatureCNNGRURGBD(nn.Module):
 
         # NOTE: Run rgb or rgb + state
         self.with_state = with_state
+        self.run_state_every_count = 0 # debug
+        self.RUN_STATE_EVERY = 30
 
         self.out_features = 0
         feature_size = 256
@@ -363,9 +380,16 @@ class NatureCNNGRURGBD(nn.Module):
         out = self.fc(out)
         encoded_tensor_list.append(out)
 
+        state_obs = observations["state"]
+        self.run_state_every_count += 1
         if self.with_state:
-            out = self.fc_state(out)
-            encoded_tensor_list.append(out)
+            if self.run_state_every_count % self.RUN_STATE_EVERY == self.RUN_STATE_EVERY - 1:
+                print(f"Run state observation @ every {self.run_state_every_count} (Simulate measurement)")
+                out = self.fc_state(state_obs)
+                encoded_tensor_list.append(out)
+            else:
+                out = self.filling(out)
+                encoded_tensor_list.append(out)
 
         return torch.cat(encoded_tensor_list, dim=1)
 

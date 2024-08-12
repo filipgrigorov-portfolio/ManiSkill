@@ -40,13 +40,10 @@ memory_logger = MemLogger(
     lbl="train_visual"
 )
 
-import os
-os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
-# export DISPLAY=:0.0
-os.environ['DISPLAY'] = ':0.0'
-
 from octo.model.octo_model import OctoModel
-
+print("Loading Octo model")
+model = OctoModel.load_pretrained("hf://rail-berkeley/octo-small-1.5")
+print(model.get_pretty_spec())
 
 
 if __name__ == "__main__":
@@ -64,82 +61,13 @@ if __name__ == "__main__":
     ENABLE_SHADOWS = set_simulation_quality(RENDER_TYPE)
 
     # Camera resolution
-    CAM_IDX = -1
+    CAM_IDX = 0
     RESOLUTION = SimulationQuantities.RESOLUTIONS[CAM_IDX]
     sensor_configs = dict(width=RESOLUTION[0], height=RESOLUTION[1])
     print(f"Camera resolution: {RESOLUTION}")
 
     # Possible randomizations
     sim_params = {}
-    if args.random_cam_pose:
-        from custom_tasks import *
-        print("Randomize existing camera poses")
-        tasks_mapping = {
-            "PullCube-v1": "PullCube-RandomCameraPose",
-            "PushCube-v1": "PushCube-RandomCameraPose",
-            "PickCube-v1": "PickCube-RandomCameraPose",
-            "StackCube-v1": "StackCube-RandomCameraPose",
-            "PegInsertionSide-v1": "PegInsertionSide-RandomCameraPose",
-            "AssemblingKits-v1": "AssemblingKits-RandomCameraPose",
-            "PlugCharger-v1": "PlugCharger-RandomCameraPose"
-        }
-
-        args.env_id = tasks_mapping[args.env_id]
-        args.exp_name = args.exp_name + "-random-cam-pose"
-
-    elif args.vary_sim_parameters:
-        from custom_tasks import *
-        print("Randomize existing camera poses")
-        tasks_mapping = {
-            "PullCube-v1": "PullCube-Randomization",
-            "PushCube-v1": "PushCube-Randomization",
-            "PickCube-v1": "PickCube-Randomization",
-            "StackCube-v1": "StackCube-Randomization",
-            "PegInsertionSide-v1": "PegInsertionSide-Randomization",
-            "AssemblingKits-v1": "AssemblingKits-Randomization",
-            "PlugCharger-v1": "PlugCharger-Randomization"
-        }
-
-        args.env_id = tasks_mapping[args.env_id]
-        args.exp_name = args.exp_name + "-randomization"
-
-        # (1) Light properties
-        light_color = SimulationQuantities.LIGHT_COLORS[0]
-        light_directions = [SimulationQuantities.LIGHT_DIRECTIONS[0]]
-
-        # (2) Material properties
-        specularity = SimulationQuantities.SPECULARITY[-1]
-        metallicity = SimulationQuantities.METALLICITY[0]
-        index_of_refraction = SimulationQuantities.INDEX_OF_REFRACTION[1]
-        transmission = SimulationQuantities.TRANSMISSION[0]
-        material_color = SimulationQuantities.MATERIAL_COLORS[0]
-
-        # (3) Material color
-        material_color = SimulationQuantities.MATERIAL_COLORS[0]
-
-        # (4) Material physics properties
-        mass = None
-        density = None
-
-        CHANGE_TARGET = True
-
-        sim_params = dict(
-            sensor_configs=sensor_configs,
-            mass=mass,
-            density=density,
-            specularity=specularity,
-            metallicity=metallicity,
-            ior=index_of_refraction,
-            transmission=transmission,
-            material_color=material_color,
-            light_color=light_color,
-            light_directions = light_directions,
-            change_target=CHANGE_TARGET
-        )
-
-
-    
-
 
     # ------------------------------------------------------------------------------------------------------------------
     if args.exp_name is None:
@@ -192,19 +120,6 @@ if __name__ == "__main__":
         sensor_configs=sensor_configs
     )
 
-    # NOTE: Possible randomization
-    if args.vary_sim_parameters:
-        print("Setting up custom simulation parameters")
-        env_kwargs = dict(
-            obs_mode="rgbd", 
-            control_mode="pd_joint_delta_pos", 
-            render_mode="rgb_array", 
-            sim_backend="gpu",
-            enable_shadow=ENABLE_SHADOWS,
-            sensor_configs=sensor_configs,
-            sim_params=sim_params
-        )
-
     # Eval
     eval_envs = gym.make(
         args.env_id, 
@@ -238,9 +153,6 @@ if __name__ == "__main__":
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
-
-    model = OctoModel.load_pretrained("hf://rail-berkeley/octo-small-1.5")
-    print(model.get_pretty_spec())
 
     for iteration in range(1, args.num_iterations + 1):
         print(f"Epoch: {iteration}, global_step={global_step}")
@@ -302,6 +214,3 @@ if __name__ == "__main__":
     if writer is not None: writer.close()
 
     wandb.finish()
-
-if __name__ == "__main__":
-    run()

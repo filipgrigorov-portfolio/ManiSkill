@@ -286,7 +286,7 @@ class Agent(nn.Module):
 
 
 if __name__ == "__main__":
-    raise("Please, use \"ppo_rgb_custom.py\" as changes are introduced there!")
+    #raise("Please, use \"ppo_rgb_custom.py\" as changes are introduced there!")
 
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
@@ -383,7 +383,7 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     
-    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track, with_state=WITH_STATE).to(device)
+    agent = Agent(envs, sample_obs=next_obs, is_tracked=args.track).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:

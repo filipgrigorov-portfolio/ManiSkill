@@ -8,6 +8,13 @@ from mani_skill.utils.wrappers import RecordEpisode
 import subprocess as sp
 import time
 
+import os
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.5'
+
 
 def run_default_visual_octo(task, name, render_quality):
     print("Running visual-based Octo")
@@ -19,12 +26,12 @@ def run_default_visual_octo(task, name, render_quality):
         "examples/baselines/octo/octo_rgb_eval.py", 
         f"--env_id={task}", 
         f"--exp-name={name}",
-        f"--num_envs={40}", #256 default: 20, 60, 100, 200, 256 (the max I can do with rtx 4090), 400 (not working)
+        f"--num_envs={1}", #256 default: 20, 60, 100, 200, 256 (the max I can do with rtx 4090), 400 (not working)
         f"--update_epochs={8}", 
         f"--num_minibatches={16}",
-        f"--total_timesteps={10_000_000}",
-        f"--eval_freq={10}",
-        f"--num-steps={20}", # 20 by default
+        f"--total_timesteps={1_000_000}",
+        f"--eval_freq={1}",
+        f"--num-steps={10}", # 20 by default
         f"--sim_quality={render_quality}",
         #f"--track"
     ])

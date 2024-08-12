@@ -106,5 +106,19 @@
             "python": "/opt/conda/bin/python",
             
         },
+
+        {
+            "name": "Debug run_octo_visual.py",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "",
+            "program": "${workspaceFolder}/scripts/run_octo_visual.py",
+            "args": ["--visual"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {},
+            "python": "/opt/conda/bin/python",
+            
+        },
     ]
 }
